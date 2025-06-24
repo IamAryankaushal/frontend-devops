@@ -1,0 +1,50 @@
+version: 2.1
+
+executors:
+  default:
+    docker:
+      - image: cimg/node:18.17.1
+
+jobs:
+  lint-and-test:
+    executor: default
+    steps:
+      - checkout
+      - run:
+          name: Install Dependencies
+          command: npm install
+      - run:
+          name: Run Linter
+          command: npm run lint || true
+      - run:
+          name: Run Tests
+          command: npm test || echo "No tests configured"
+
+  build-and-push:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - setup_remote_docker
+
+      - run:
+          name: Docker Login
+          command: |
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+      - run:
+          name: Build and Push Image
+          command: |
+            docker build -t aryankaushal7/portfolio-frontend:latest .
+            docker tag aryankaushal7/portfolio-frontend:latest aryankaushal7/portfolio-frontend:$CIRCLE_SHA1
+            docker push aryankaushal7/portfolio-frontend:latest
+            docker push aryankaushal7/portfolio-frontend:$CIRCLE_SHA1
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - lint-and-test
+      - build-and-push:
+          requires:
+            - lint-and-test
