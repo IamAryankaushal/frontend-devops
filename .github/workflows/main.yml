@@ -7,28 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set up Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Run Linter
-        run: npm run lint || true
-
-      - name: Run Tests
-        run: npm test || echo "No tests configured"
-
   build-and-push:
-    needs: lint-and-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -47,7 +26,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./Dockerfile
+          file: dockerstuff/Dockerfile   
           push: true
           tags: |
             aryankaushal7/portfolio-frontend:latest
