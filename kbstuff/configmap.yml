@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portfolio-config
+data:
+  NGINX_HOST: portfolio.local
+  NGINX_PORT: "80"

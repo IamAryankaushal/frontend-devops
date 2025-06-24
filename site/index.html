@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aryan Kaushal - Terminal Portfolio</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+      font-family: 'Fira Code', monospace;
+    }
+
+    #preloader {
+      transition: opacity 1s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-black">
+  <!-- Canvas Background -->
+  <canvas id="matrixCanvas"></canvas>
+
+  <!-- Shared Terminal Shell -->
+  <div class="fixed inset-0 flex items-center justify-center p-8 z-20">
+    <div class="terminal translucent w-full max-w-3xl h-[65vh] rounded-lg overflow-hidden shadow-2xl bg-black relative">
+
+      <!-- Preloader Content -->
+      <div id="preloader" class="absolute inset-0 flex flex-col items-center justify-center text-green-400 bg-black z-10 transition-opacity duration-1000 rounded-lg">
+        <div id="preloadLine1" class="text-xl"></div>
+        <div id="preloadLine2" class="text-sm opacity-75"></div>
+      </div>
+
+      <!-- Terminal Header -->
+      <div class="terminal-header px-4 py-3 flex items-center justify-between z-0">
+        <div class="text-lg font-bold">aryan@portfolio:~$</div>
+      </div>
+
+      <!-- Terminal Content -->
+      <div class="terminal-content p-6 h-full overflow-y-auto text-green-400 font-mono text-sm opacity-0 transition-opacity duration-1000" id="terminalContent"></div>
+
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
