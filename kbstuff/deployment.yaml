@@ -15,6 +15,7 @@ spec:
       containers:
         - name: portfolio-frontend
           image: aryankaushal7/portfolio-frontend
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
           envFrom:
