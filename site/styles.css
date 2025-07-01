@@ -4,73 +4,33 @@ body {
   background: black;
 }
 
-.matrix-bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #000;
-  z-index: 1;
-  font-family: 'Fira Code', monospace;
-  font-size: 15px;
-  line-height: 15px;
-  overflow: hidden;
-}
-
-.binary-digit {
-  display: inline-block;
-  color: rgba(0, 255, 0, 0.45);
-  font-weight: 300;
-  transition: color 0.1s ease-in-out, text-shadow 0.2s ease-in-out;
-}
-
-.binary-digit.bright {
-  color: rgba(0, 255, 0, 0.6);
-  text-shadow: 0 0 3px rgba(0, 255, 0, 0.8);
-}
-
-.binary-row {
-  white-space: nowrap;
-  margin: 0;
-  padding: 0;
-}
-
-/* Translucent terminal state (during loading) */
-.terminal.translucent {
-  background-color: rgba(0, 0, 0, 0.2); /* more translucent */
-  backdrop-filter: blur(2.5px) brightness(0.5); /* subtle glow */
-  transition: background-color 1.5s ease, backdrop-filter 1.5s ease;
-}
-
-/* Make internal parts of terminal also transparent during loading */
-.terminal.translucent .terminal-header,
-.terminal.translucent .terminal-content {
-  background-color: transparent !important;
-  backdrop-filter: none !important;
-  transition: background-color 1.5s ease, backdrop-filter 1.5s ease;
-}
-
-
-/* Terminal container */
-.terminal {
-  background: #000000;
-  /*box-shadow: 0 0 60px rgba(0, 255, 0, 0.6), 0 0 120px rgba(0, 255, 0, 0.4);*/
-  
-  border-radius: 0.5rem;
-  overflow: hidden;
-  transition: background-color 1.5s ease, backdrop-filter 1.5s ease, box-shadow 1s ease;
-}
-
-/* Terminal header bar */
 .terminal-header {
   background: rgba(0, 255, 0, 0.6);
   color: #000;
   font-family: 'Fira Code', monospace;
   transition: background-color 1.5s ease, backdrop-filter 1.5s ease;
+  /*cursor: move; /* drag cursor */
+  user-select: none;
 }
 
-/* Terminal content */
+.terminal {
+  background: #000000;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: background-color 1.5s ease, backdrop-filter 1.5s ease, box-shadow 1s ease;
+}
+
+.terminal.translucent {
+  background-color: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(2.5px) brightness(0.5);
+}
+
+.terminal.translucent .terminal-header,
+.terminal.translucent .terminal-content {
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+}
+
 .terminal-content {
   color: #00ff00;
   line-height: 1.6;
@@ -81,7 +41,6 @@ body {
   transition: opacity 1s ease-in-out;
 }
 
-/* Scrollbar */
 .terminal-content::-webkit-scrollbar {
   width: 4px;
 }
@@ -90,7 +49,6 @@ body {
   border-radius: 10px;
 }
 
-/* Line & typing cursor */
 #terminalContent .line {
   display: block;
   white-space: pre;
@@ -110,15 +68,19 @@ body {
   50% { opacity: 0; }
 }
 
-/* Canvas background */
 #matrixCanvas {
   position: fixed;
   top: 0;
   left: 0;
   z-index: 1;
+  filter: brightness(1);
+  transition: filter 1.5s ease-in-out;
 }
 
-/* Preloader box inside terminal */
+body.matrix-dimmed #matrixCanvas {
+  filter: brightness(0.4);
+}
+
 #preloader {
   position: absolute;
   inset: 0;
@@ -126,7 +88,7 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-color: transparent !important; /* << important fix */
+  background-color: transparent !important;
   color: rgba(0, 255, 0, 0.6);
   z-index: 10;
   font-family: 'Fira Code', monospace;
@@ -134,7 +96,6 @@ body {
   border: 1px solid rgba(0, 255, 0, 0.6);
 }
 
-/* Ensure preloader fades out cleanly */
 #preloader[style*="display: none"] {
   display: none !important;
 }
@@ -148,25 +109,13 @@ body {
   opacity: 0.7;
 }
 
-/* Fade the header text smoothly */
 .terminal-header .text-lg {
   opacity: 1;
   transition: opacity 1.5s ease;
 }
 
-/* During translucent loading state, hide the header text */
 .terminal.translucent .terminal-header .text-lg {
   opacity: 0;
-}
-/* Default brightness */
-#matrixCanvas {
-  filter: brightness(1);
-  transition: filter 1.5s ease-in-out;
-}
-
-/* Dimmed matrix state */
-body.matrix-dimmed #matrixCanvas {
-  filter: brightness(0.4);
 }
 
 @keyframes glowPulse {
@@ -180,4 +129,32 @@ body.matrix-dimmed #matrixCanvas {
 
 .terminal-glow {
   animation: glowPulse 5s ease-in-out infinite;
+}
+
+#secondTerminalContainer a {
+  color: #00ff00;
+  text-decoration: underline;
+}
+#secondTerminalContainer a:hover {
+  color: lime;
+}
+
+/* Show second terminal with animation */
+#secondTerminalContainer {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+  transition: opacity 1s ease, transform 1s ease;
+}
+
+#secondTerminalContainer.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Smooth slide to the left */
+#mainTerminal.slide-left {
+  left: 2rem !important;
+  transform: translateY(-50%) !important;
 }

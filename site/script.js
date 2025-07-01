@@ -135,7 +135,6 @@ function showTerminal() {
   setTimeout(() => {
     preloadEl.style.display = 'none';
     startTyping();
-    makeTerminalDraggable(); // ✅ Activate dragging after loading
   }, 3000);
 
   setTimeout(() => {
@@ -158,7 +157,12 @@ function startTyping() {
   cursor.className = "typing-cursor";
 
   function typeNextLine() {
-    if (termIndex >= terminalLines.length) return;
+    if (termIndex >= terminalLines.length) {
+      setTimeout(() => {
+        slideMainTerminalLeft();
+      }, 800);
+      return;
+    }
 
     const line = document.createElement("span");
     line.className = "line";
@@ -181,6 +185,18 @@ function startTyping() {
   }
 
   typeNextLine();
+}
+
+function slideMainTerminalLeft() {
+  const mainTerminal = document.getElementById("mainTerminal");
+  mainTerminal.classList.add("slide-left");
+
+  const secondTerminal = document.getElementById("secondTerminalContainer");
+  secondTerminal.classList.remove("hidden");
+  setTimeout(() => {
+    secondTerminal.classList.add("visible");
+    makeAllTerminalsDraggable();
+  }, 100);
 }
 
 function typeLoadingText() {
@@ -211,58 +227,45 @@ function typeLoadingText() {
   typeFirstLine();
 }
 
-function makeTerminalDraggable() {
-  const terminal = document.querySelector('.terminal');
-  const header = terminal.querySelector('.terminal-header');
+function makeAllTerminalsDraggable() {
+  const draggablePairs = [
+    { header: '#mainTerminalWrapper .terminal-header', container: '#mainTerminalWrapper' },
+    { header: '#secondTerminalContainer .terminal-header', container: '#secondTerminalContainer' }
+  ];
 
-  let isDragging = false;
-  let offsetX = 0;
-  let offsetY = 0;
+  draggablePairs.forEach(({ header, container }) => {
+    const headerEl = document.querySelector(header);
+    const terminalEl = document.querySelector(container);
 
-  header.addEventListener('mousedown', (e) => {
-    if (terminal.classList.contains('translucent')) return;
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
 
-    const rect = terminal.getBoundingClientRect();
+   headerEl.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  const rect = terminalEl.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
+  terminalEl.style.position = 'absolute';
+  //terminalEl.style.zIndex = '1000'; // temporarily bring to front
+});
 
-    terminal.style.transform = 'none';
-    terminal.style.position = 'absolute';
-    terminal.style.left = `${rect.left}px`;
-    terminal.style.top = `${rect.top}px`;
 
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
-    isDragging = true;
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      terminalEl.style.left = `${e.clientX - offsetX}px`;
+      terminalEl.style.top = `${e.clientY - offsetY}px`;
+    });
 
-    // Disable text selection while dragging
-    document.body.style.userSelect = 'none';
-  });
+    document.addEventListener('mouseup', () => {
+  if (isDragging) {
+    terminalEl.style.zIndex = '30'; // reset to normal stacking order
+  }
+  isDragging = false;
+});
 
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-
-    const x = e.clientX - offsetX;
-    const y = e.clientY - offsetY;
-
-    // Clamp to viewport: prevent header from going above or outside left
-    const minTop = 0;
-    const minLeft = 0;
-    const maxLeft = window.innerWidth - terminal.offsetWidth;
-    const maxTop = window.innerHeight - 40; // optional bottom limit (e.g. 40px from bottom)
-
-    const clampedX = Math.min(Math.max(x, minLeft), maxLeft);
-    const clampedY = Math.max(y, minTop); // we allow downward drag
-
-    terminal.style.left = `${clampedX}px`;
-    terminal.style.top = `${clampedY}px`;
-  });
-
-  document.addEventListener('mouseup', () => {
-    isDragging = false;
-    document.body.style.userSelect = '';
   });
 }
-
-
 
 function init() {
   resizeCanvas();
@@ -270,8 +273,8 @@ function init() {
   setTimeout(() => {
     seedRandomCells(10);
     spreadAndFlicker();
-    initBanner();
-    animateBannerWave();
+    if (typeof initBanner === 'function') initBanner();
+    if (typeof animateBannerWave === 'function') animateBannerWave();
   }, 5000);
 }
 

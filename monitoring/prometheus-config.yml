@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'frontend-app'
+    static_configs:
+      - targets: ['portfolio-service.default.svc.cluster.local:80']
