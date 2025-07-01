@@ -1,51 +1,64 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo [1/6] Building latest Docker image...
-docker build -t aryankaushal7/portfolio-frontend:latest -f dockerstuff/Dockerfile .
+:: Generate a timestamp-based tag like v20250701_1922
+for /f "tokens=1-3 delims=/ " %%a in ('date /t') do (
+    set TODAY=%%c%%a%%b
+)
+for /f "tokens=1-2 delims=: " %%a in ('time /t') do (
+    set NOW=%%a%%b
+)
+set IMAGETAG=v%TODAY%_%NOW%
+set FULL_IMAGE=aryankaushal7/portfolio-frontend:%IMAGETAG%
+
+echo ===============================
+echo Cleaning up old Kubernetes objects...
+kubectl delete deployment portfolio-frontend --ignore-not-found
+kubectl delete service portfolio-service --ignore-not-found
+kubectl delete configmap portfolio-config --ignore-not-found
+kubectl delete ingress portfolio-ingress --ignore-not-found
+
+echo.
+echo [1/7] Building Docker image with tag: %IMAGETAG%
+docker build --no-cache -t %FULL_IMAGE% -f dockerstuff/Dockerfile .
 IF %ERRORLEVEL% NEQ 0 (
     echo Docker build failed. Exiting.
+    pause
     exit /b
 )
 
-echo [2/6] Loading image into Minikube...
-minikube image load aryankaushal7/portfolio-frontend:latest
+echo.
+echo [2/7] Loading image into Minikube...
+minikube image load %FULL_IMAGE%
 IF %ERRORLEVEL% NEQ 0 (
     echo Minikube image load failed. Exiting.
+    pause
     exit /b
 )
 
-echo [3/6] Applying Kubernetes configmap...
+echo.
+echo [3/7] Applying Kubernetes configmap...
 kubectl apply -f kbstuff\configmap.yml
-IF %ERRORLEVEL% NEQ 0 (
-    echo Configmap apply failed. Exiting.
-    exit /b
-)
 
-echo [4/6] Applying Kubernetes deployment...
+echo.
+echo [4/7] Applying Kubernetes deployment...
 kubectl apply -f kbstuff\deployment.yaml
-IF %ERRORLEVEL% NEQ 0 (
-    echo Deployment apply failed. Exiting.
-    exit /b
-)
 
-echo [5/6] Restarting Kubernetes deployment...
-kubectl rollout restart deployment portfolio-frontend
-IF %ERRORLEVEL% NEQ 0 (
-    echo Deployment rollout restart failed. Exiting.
-    exit /b
-)
+echo.
+echo [5/7] Setting new image in deployment...
+kubectl set image deployment/portfolio-frontend portfolio-frontend=%FULL_IMAGE%
 
-echo [6/6] Applying service and ingress...
+echo.
+echo [6/7] Applying service and ingress...
 kubectl apply -f kbstuff\service.yaml
 kubectl apply -f kbstuff\ingress.yaml
-IF %ERRORLEVEL% NEQ 0 (
-    echo Service or ingress apply failed. Exiting.
-    exit /b
-)
 
-echo [7/6] Checking deployment rollout status...
+echo.
+echo [7/7] Restarting deployment and waiting...
+kubectl rollout restart deployment portfolio-frontend
 kubectl rollout status deployment portfolio-frontend
 
-echo Done! Your latest frontend code is deployed to Minikube.
+echo.
+echo Deployment complete with image: %FULL_IMAGE%
+echo Now run: minikube service portfolio-service
 pause
