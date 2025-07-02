@@ -1,64 +1,131 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Generate a timestamp-based tag like v20250701_1922
-for /f "tokens=1-3 delims=/ " %%a in ('date /t') do (
-    set TODAY=%%c%%a%%b
-)
-for /f "tokens=1-2 delims=: " %%a in ('time /t') do (
-    set NOW=%%a%%b
-)
-set IMAGETAG=v%TODAY%_%NOW%
-set FULL_IMAGE=aryankaushal7/portfolio-frontend:%IMAGETAG%
-
 echo ===============================
-echo Cleaning up old Kubernetes objects...
-kubectl delete deployment portfolio-frontend --ignore-not-found
-kubectl delete service portfolio-service --ignore-not-found
-kubectl delete configmap portfolio-config --ignore-not-found
-kubectl delete ingress portfolio-ingress --ignore-not-found
+echo LOCAL MINIKUBE DEPLOYMENT SCRIPT
+echo ===============================
 
-echo.
-echo [1/7] Building Docker image with tag: %IMAGETAG%
-docker build --no-cache -t %FULL_IMAGE% -f dockerstuff/Dockerfile .
+:: Check if Minikube is running
+echo Checking Minikube status...
+minikube status >nul 2>&1
 IF %ERRORLEVEL% NEQ 0 (
-    echo Docker build failed. Exiting.
+    echo Minikube is not running. Please start it first with: minikube start
     pause
     exit /b
 )
 
+echo ✓ Minikube is running
 echo.
-echo [2/7] Loading image into Minikube...
-minikube image load %FULL_IMAGE%
+
+:: Clean up existing resources
+echo [1/6] Cleaning up existing Kubernetes resources...
+kubectl delete deployment portfolio-frontend --ignore-not-found=true
+kubectl delete service portfolio-service --ignore-not-found=true
+kubectl delete configmap portfolio-config --ignore-not-found=true
+kubectl delete ingress portfolio-ingress --ignore-not-found=true
+
+echo ✓ Cleanup completed
+echo.
+
+:: Switch to Minikube's Docker environment
+echo [2/6] Switching to Minikube's Docker environment...
+FOR /f "tokens=*" %%i IN ('minikube docker-env --shell cmd') DO %%i
+
+echo ✓ Switched to Minikube Docker environment
+echo.
+
+:: Build image directly in Minikube's Docker
+echo [3/6] Building Docker image in Minikube...
+set IMAGETAG=v%TODAY%_%NOW%
+docker build --no-cache -t aryankaushal7/portfolio-frontend:%IMAGETAG% -f dockerstuff/Dockerfile .
+
 IF %ERRORLEVEL% NEQ 0 (
-    echo Minikube image load failed. Exiting.
+    echo ❌ Docker build failed
     pause
     exit /b
 )
 
+echo ✓ Docker image built successfully
 echo.
-echo [3/7] Applying Kubernetes configmap...
+
+:: Verify image exists
+echo Verifying image exists in Minikube...
+docker images | findstr portfolio-frontend
+IF %ERRORLEVEL% NEQ 0 (
+    echo ❌ Image not found in Minikube Docker
+    pause
+    exit /b
+)
+
+echo ✓ Image verified in Minikube Docker
+echo.
+
+:: Create temporary deployment file with correct settings
+echo [4/6] Creating deployment configuration...
+copy kbstuff\deployment.yaml kbstuff\deployment-temp.yaml >nul
+
+:: Update the deployment file with latest tag and Never pull policy
+powershell -Command "(Get-Content kbstuff\deployment-temp.yaml) -replace 'image: aryankaushal7/portfolio-frontend.*', 'image: aryankaushal7/portfolio-frontend:latest' -replace 'imagePullPolicy: IfNotPresent', 'imagePullPolicy: Never' | Set-Content kbstuff\deployment-temp.yaml"
+
+echo ✓ Deployment configuration ready
+echo.
+
+:: Apply all Kubernetes resources
+echo [5/6] Applying Kubernetes resources...
+
+echo   → Applying ConfigMap...
 kubectl apply -f kbstuff\configmap.yml
 
-echo.
-echo [4/7] Applying Kubernetes deployment...
-kubectl apply -f kbstuff\deployment.yaml
+echo   → Applying Deployment...
+kubectl apply -f kbstuff\deployment-temp.yaml
 
-echo.
-echo [5/7] Setting new image in deployment...
-kubectl set image deployment/portfolio-frontend portfolio-frontend=%FULL_IMAGE%
-
-echo.
-echo [6/7] Applying service and ingress...
+echo   → Applying Service...
 kubectl apply -f kbstuff\service.yaml
+
+echo   → Applying Ingress...
 kubectl apply -f kbstuff\ingress.yaml
 
+echo ✓ All resources applied
 echo.
-echo [7/7] Restarting deployment and waiting...
-kubectl rollout restart deployment portfolio-frontend
-kubectl rollout status deployment portfolio-frontend
+
+:: Wait for deployment to be ready
+echo [6/6] Waiting for deployment to be ready...
+kubectl rollout status deployment portfolio-frontend --timeout=60s
+
+IF %ERRORLEVEL% NEQ 0 (
+    echo ❌ Deployment failed to become ready
+    echo Checking pod status...
+    kubectl get pods -l app=portfolio-frontend
+    echo.
+    echo Describing pod for troubleshooting...
+    kubectl describe pod -l app=portfolio-frontend
+    pause
+    exit /b
+)
+
+echo ✓ Deployment is ready!
+echo.
+
+:: Clean up temporary file
+del kbstuff\deployment-temp.yaml >nul 2>&1
+
+:: Show final status
+echo ===============================
+echo DEPLOYMENT SUCCESSFUL! 🎉
+echo ===============================
+echo.
+echo Resources created:
+kubectl get all -l app=portfolio-frontend
+echo.
+echo ===============================
+echo Opening service in browser...
+echo ===============================
+
+:: Open the service
+minikube service portfolio-service
 
 echo.
-echo Deployment complete with image: %FULL_IMAGE%
-echo Now run: minikube service portfolio-service
+echo Deployment completed successfully!
+echo Your portfolio is now running on Minikube.
+echo.
 pause
