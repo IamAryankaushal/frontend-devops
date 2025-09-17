@@ -17,7 +17,7 @@ echo Minikube is running
 echo.
 
 :: Clean old resources
-echo [1/6] Cleaning old resources...
+echo [1/5] Cleaning old resources...
 kubectl delete deployment portfolio-frontend --ignore-not-found=true
 kubectl delete service portfolio-service --ignore-not-found=true
 kubectl delete ingress portfolio-ingress --ignore-not-found=true
@@ -26,21 +26,14 @@ echo Cleanup done
 echo.
 
 :: Switch Docker env to Minikube
-echo [2/6] Switching Docker env...
+echo [2/5] Switching Docker env...
 FOR /f "tokens=*" %%i IN ('minikube docker-env --shell cmd') DO %%i
 echo Docker env switched
 echo.
 
-:: Generate unique tag (timestamp-based)
-for /f "tokens=2 delims==" %%a in ('wmic os get localdatetime /value') do set datetime=%%a
-set IMAGETAG=v%datetime:~0,8%_%datetime:~8,6%
-
-echo Using local image tag: portfolio-frontend:%IMAGETAG%
-echo.
-
 :: Build new image inside Minikube’s Docker
-echo [3/6] Building Docker image...
-docker build --no-cache -t portfolio-frontend:%IMAGETAG% -f dockerstuff/Dockerfile .
+echo [3/5] Building Docker image...
+docker build --no-cache -t portfolio-frontend:latest -f dockerstuff/Dockerfile .
 IF %ERRORLEVEL% NEQ 0 (
     echo Build failed
     pause
@@ -49,24 +42,17 @@ IF %ERRORLEVEL% NEQ 0 (
 echo Image built
 echo.
 
-:: Create temp deployment file with correct image/tag
-echo [4/6] Updating deployment manifest...
-copy kbstuff\deployment.yaml kbstuff\deployment-temp.yaml >nul
-powershell -Command "(Get-Content kbstuff\deployment-temp.yaml) -replace 'image: .*portfolio-frontend.*', 'image: portfolio-frontend:%IMAGETAG%' -replace 'imagePullPolicy: IfNotPresent', 'imagePullPolicy: Never' | Set-Content kbstuff\deployment-temp.yaml"
-echo Deployment updated with tag %IMAGETAG%
-echo.
-
-:: Apply resources
-echo [5/6] Applying resources...
-kubectl apply -f kbstuff\configmap.yml
-kubectl apply -f kbstuff\deployment-temp.yaml
-kubectl apply -f kbstuff\service.yaml
-kubectl apply -f kbstuff\ingress.yaml
+:: Apply Kubernetes resources
+echo [4/5] Applying Kubernetes resources...
+kubectl apply -f kbstuff/configmap.yml
+kubectl apply -f kbstuff/deployment.yaml
+kubectl apply -f kbstuff/service.yaml
+kubectl apply -f kbstuff/ingress.yaml
 echo Resources applied
 echo.
 
 :: Wait for rollout
-echo [6/6] Waiting for rollout...
+echo [5/5] Waiting for rollout...
 kubectl rollout status deployment portfolio-frontend --timeout=60s
 IF %ERRORLEVEL% NEQ 0 (
     echo Rollout failed
@@ -76,9 +62,6 @@ IF %ERRORLEVEL% NEQ 0 (
 )
 echo Rollout successful
 echo.
-
-:: Cleanup temp
-del kbstuff\deployment-temp.yaml >nul 2>&1
 
 :: Final status
 echo ===============================
