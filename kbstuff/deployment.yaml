@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: portfolio-frontend
-          image: portfolio-frontend:latest   # Always use local image
-          imagePullPolicy: Never             # Never pull from Docker Hub
+          image: portfolio-frontend:latest   # local image
+          imagePullPolicy: Never             # force Kubernetes to use Minikube's local Docker
           ports:
             - containerPort: 80
           envFrom:

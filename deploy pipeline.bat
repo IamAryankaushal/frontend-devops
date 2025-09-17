@@ -1,74 +1,33 @@
 @echo off
-setlocal enabledelayedexpansion
+echo === Starting Portfolio Deployment ===
 
-echo ===============================
-echo LOCAL MINIKUBE DEPLOYMENT SCRIPT
-echo ===============================
+:: Step 1: Point Docker CLI to Minikube's Docker daemon
+echo Setting Docker environment to Minikube...
+for /f "tokens=*" %%i in ('minikube docker-env --shell cmd') do %%i
 
-:: Check Minikube status
-echo Checking Minikube status...
-minikube status >nul 2>&1
-IF %ERRORLEVEL% NEQ 0 (
-    echo Minikube is not running. Please start it first with: minikube start
-    pause
-    exit /b
-)
-echo Minikube is running
-echo.
-
-:: Clean old resources
-echo [1/5] Cleaning old resources...
-kubectl delete deployment portfolio-frontend --ignore-not-found=true
-kubectl delete service portfolio-service --ignore-not-found=true
-kubectl delete ingress portfolio-ingress --ignore-not-found=true
-kubectl delete configmap portfolio-config --ignore-not-found=true
-echo Cleanup done
-echo.
-
-:: Switch Docker env to Minikube
-echo [2/5] Switching Docker env...
-FOR /f "tokens=*" %%i IN ('minikube docker-env --shell cmd') DO %%i
-echo Docker env switched
-echo.
-
-:: Build new image inside Minikube’s Docker
-echo [3/5] Building Docker image...
+:: Step 2: Build a fresh Docker image inside Minikube
+echo Building Docker image for Portfolio...
 docker build --no-cache -t portfolio-frontend:latest -f dockerstuff/Dockerfile .
-IF %ERRORLEVEL% NEQ 0 (
-    echo Build failed
-    pause
-    exit /b
-)
-echo Image built
-echo.
 
-:: Apply Kubernetes resources
-echo [4/5] Applying Kubernetes resources...
+:: Step 3: Apply Kubernetes manifests
+echo Applying Kubernetes Configurations...
+
 kubectl apply -f kbstuff/configmap.yml
-kubectl apply -f kbstuff/deployment.yaml
 kubectl apply -f kbstuff/service.yaml
+kubectl apply -f kbstuff/deployment.yaml
 kubectl apply -f kbstuff/ingress.yaml
-echo Resources applied
-echo.
 
-:: Wait for rollout
-echo [5/5] Waiting for rollout...
-kubectl rollout status deployment portfolio-frontend --timeout=60s
-IF %ERRORLEVEL% NEQ 0 (
-    echo Rollout failed
-    kubectl describe pod -l app=portfolio-frontend
-    pause
-    exit /b
-)
-echo Rollout successful
-echo.
+:: Step 4: Restart pods so they use the new image
+echo Restarting portfolio pods...
+kubectl delete pods -l app=portfolio-frontend
 
-:: Final status
-echo ===============================
-echo DEPLOYMENT SUCCESSFUL
-echo ===============================
-kubectl get pods -l app=portfolio-frontend
-echo.
-echo Opening service in browser...
-minikube service portfolio-service
+:: Step 5: Confirm rollout status
+echo Waiting for rollout to complete...
+kubectl rollout status deployment/portfolio-frontend
+
+:: Step 6: Launch browser
+echo Opening website in your browser...
+start http://portfolio.local
+
+echo === Deployment Finished! ===
 pause
