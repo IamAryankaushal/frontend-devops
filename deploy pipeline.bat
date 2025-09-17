@@ -25,7 +25,7 @@ kubectl delete configmap portfolio-config --ignore-not-found=true
 echo Cleanup done
 echo.
 
-:: Switch Docker env
+:: Switch Docker env to Minikube
 echo [2/6] Switching Docker env...
 FOR /f "tokens=*" %%i IN ('minikube docker-env --shell cmd') DO %%i
 echo Docker env switched
@@ -35,12 +35,12 @@ echo.
 for /f "tokens=2 delims==" %%a in ('wmic os get localdatetime /value') do set datetime=%%a
 set IMAGETAG=v%datetime:~0,8%_%datetime:~8,6%
 
-echo Using image tag: %IMAGETAG%
+echo Using local image tag: portfolio-frontend:%IMAGETAG%
 echo.
 
-:: Build new image
+:: Build new image inside Minikube’s Docker
 echo [3/6] Building Docker image...
-docker build --no-cache -t aryankaushal7/portfolio-frontend:%IMAGETAG% -f dockerstuff/Dockerfile .
+docker build --no-cache -t portfolio-frontend:%IMAGETAG% -f dockerstuff/Dockerfile .
 IF %ERRORLEVEL% NEQ 0 (
     echo Build failed
     pause
@@ -49,10 +49,10 @@ IF %ERRORLEVEL% NEQ 0 (
 echo Image built
 echo.
 
-:: Create temp deployment
+:: Create temp deployment file with correct image/tag
 echo [4/6] Updating deployment manifest...
 copy kbstuff\deployment.yaml kbstuff\deployment-temp.yaml >nul
-powershell -Command "(Get-Content kbstuff\deployment-temp.yaml) -replace 'image: aryankaushal7/portfolio-frontend.*', 'image: aryankaushal7/portfolio-frontend:%IMAGETAG%' -replace 'imagePullPolicy: IfNotPresent', 'imagePullPolicy: Never' | Set-Content kbstuff\deployment-temp.yaml"
+powershell -Command "(Get-Content kbstuff\deployment-temp.yaml) -replace 'image: .*portfolio-frontend.*', 'image: portfolio-frontend:%IMAGETAG%' -replace 'imagePullPolicy: IfNotPresent', 'imagePullPolicy: Never' | Set-Content kbstuff\deployment-temp.yaml"
 echo Deployment updated with tag %IMAGETAG%
 echo.
 
@@ -82,7 +82,7 @@ del kbstuff\deployment-temp.yaml >nul 2>&1
 
 :: Final status
 echo ===============================
-echo DEPLOYMENT SUCCESSFUL! 
+echo DEPLOYMENT SUCCESSFUL
 echo ===============================
 kubectl get pods -l app=portfolio-frontend
 echo.
