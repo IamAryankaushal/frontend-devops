@@ -26,7 +26,15 @@ jobs:
       - run:
           name: Sync Files to S3
           command: |
-            aws s3 sync ./ s3://aryan-portfolio-site-bucket --delete --exact-timestamps
+            aws s3 sync site/ s3://aryan-portfolio-site-bucket \
+              --exact-timestamps --delete \
+              --exclude ".git/*" \
+              --exclude ".circleci/*" \
+              --exclude ".github/*" \
+              --exclude "README.md" \
+              --exclude "*.yml" \
+              --exclude "*.yaml" \
+              --exclude "*.bat"
 
       - run:
           name: Invalidate CloudFront Cache
@@ -34,10 +42,6 @@ jobs:
             aws cloudfront create-invalidation \
               --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
               --paths "/*"
-
-      - run:
-          name: Notify Deployment Success
-          command: echo "CircleCI Deployment completed successfully."
 
 workflows:
   deploy_workflow:
